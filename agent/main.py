@@ -1,16 +1,20 @@
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 
-from livekit import agents
-from livekit.agents import AgentSession, Agent, RoomInputOptions, function_tool, RunContext
-from livekit.plugins import (
+from livekit import agents # type: ignore
+from livekit.agents import AgentSession, Agent, RoomInputOptions, function_tool, RunContext # type: ignore
+from livekit.plugins import ( # type: ignore
     groq,
     silero,
     noise_cancellation,
 )
-from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from livekit.plugins.turn_detector.multilingual import MultilingualModel # type: ignore
 from livekit_plugins.plugins.kokoro_tts import TTS as KokoroTTS
 
 from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+
+# Import the RAG context provider
+from rag_utils import RAGContextProvider
 
 load_dotenv()
 
@@ -75,17 +79,52 @@ class Assistant(Agent):
         - Regularly update tools, tone, and suggestions based on user feedback and mental health best practices.
         - Reflect the latest research in psychology, emotional intelligence, and digital well-being.
         """)
+        # Initialize RAG context provider
+        self.rag_provider = RAGContextProvider()
+        # Store conversation history
+        self.conversation_history = []
 
     async def on_enter(self) -> None:
         # userdata: UserInfo = self.session.userdata
         await self.session.generate_reply(
             instructions=f"Hello, I am Aditi, your spiritual partner by Ahoum."
         )
+        self.conversation_history.append("Hello, I am Aditi, your spiritual partner by Ahoum.")
 
     async def on_exit(self):
         await self.session.generate_reply(
             instructions="Tell the user a friendly goodbye before you exit.",
         )
+
+    @function_tool()
+    async def get_context_for_query(self, query: str) -> str:
+        """Get relevant context for the current query from the knowledge base"""
+        context = self.rag_provider.get_context(query, self.conversation_history)
+        return context
+
+    async def on_message(self, text: str, ctx: RunContext) -> None:
+        """Override on_message to track conversation history and provide context"""
+        # Add user message to conversation history
+        self.conversation_history.append(f"User: {text}")
+        
+        # Get context for the current query
+        context = await self.get_context_for_query(text)
+        
+        # Generate reply with additional context
+        instructions = f"""
+        Based on the user's message: "{text}"
+        
+        {f"Relevant context from knowledge base:\n{context}" if context else ""}
+        
+        Generate a thoughtful, empathetic response that helps the user reflect on their situation.
+        Make your response conversational and ask an insightful follow-up question.
+        """
+        
+        await self.session.generate_reply(instructions=instructions)
+        
+        # Add assistant's response to conversation history
+        # We don't have direct access to the response text, so we'll record the instruction
+        self.conversation_history.append(f"Assistant: [response based on the instructions]")
 
 
 async def entrypoint(ctx: agents.JobContext):
