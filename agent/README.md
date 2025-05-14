@@ -6,7 +6,7 @@ This project adds Retrieval-Augmented Generation (RAG) capabilities to the Ahoum
 
 ### Prerequisites
 
-1. MongoDB Atlas account with Vector Search enabled
+1. MongoDB database (can be MongoDB Atlas or self-hosted)
 2. Python 3.8+
 3. LiveKit account (for voice agent functionality)
 
@@ -16,7 +16,7 @@ Create a `.env` file in the `agent` directory with the following variables:
 
 ```
 # MongoDB Connection
-MONGODB_CONNECTION_STRING=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+MONGODB_CONNECTION_STRING=mongodb://username:password@host:port/ahoum_db?directConnection=true
 
 # LiveKit Connection (already configured in your existing setup)
 LIVEKIT_URL=...
@@ -32,12 +32,16 @@ LIVEKIT_API_SECRET=...
 pip install -r requirements.txt
 ```
 
-2. Set up MongoDB Atlas Vector Search:
-   - Create a new MongoDB Atlas cluster
-   - Enable Vector Search capability
-   - Create a database called `ahoum_db`
-   - Create a collection called `knowledge_base`
-   - Create a vector search index on the `embedding` field
+2. Set up MongoDB:
+   - If using MongoDB Atlas:
+     - Create a new MongoDB Atlas cluster
+     - Enable Vector Search capability
+     - Create a database called `ahoum_db`
+     - Create a collection called `knowledge_base`
+     - Create a vector search index on the `embedding` field
+   - If using self-hosted MongoDB:
+     - Ensure MongoDB is running and accessible
+     - The code will automatically use an in-memory vector similarity search
 
 3. Populate the vector database with initial data:
 
@@ -51,11 +55,60 @@ python populate_vector_db.py
 python main.py
 ```
 
+## Docker Deployment
+
+This project can be easily deployed using Docker and Docker Compose.
+
+### Docker Environment Variables
+
+Create a `.env` file at the root of the project with the following variables:
+
+```
+# LiveKit
+LIVEKIT_URL=your_livekit_url
+LIVEKIT_API_KEY=your_livekit_api_key
+LIVEKIT_API_SECRET=your_livekit_api_secret
+NEXT_PUBLIC_LIVEKIT_URL=your_livekit_url
+
+# Groq API Key
+GROQ_API_KEY=your_groq_api_key
+
+# MongoDB (optional - only if using external MongoDB)
+# MONGODB_CONNECTION_STRING=mongodb://username:password@host:port/dbname
+```
+
+### Running with Docker Compose
+
+To start all services (frontend, agent, and MongoDB):
+
+```bash
+docker-compose up -d
+```
+
+This will:
+1. Start a MongoDB container
+2. Start the agent connected to MongoDB
+3. Initialize the vector database with sample data
+4. Start the frontend application
+
+### Accessing the Application
+
+- Frontend: http://localhost:3000
+- Agent: http://localhost:8000
+
+### Using an External MongoDB
+
+If you want to use an external MongoDB instance (self-hosted or Atlas) instead of the Docker container:
+
+1. Uncomment and set the `MONGODB_CONNECTION_STRING` in your `.env` file
+2. For MongoDB Atlas, make sure Vector Search is enabled
+3. For self-hosted MongoDB, the agent will use in-memory vector similarity
+
 ## How It Works
 
 1. The agent uses RAG (Retrieval-Augmented Generation) to enhance its responses:
    - When a user asks a question, the agent first creates an embedding of the question
-   - It searches the MongoDB Atlas Vector Search for relevant information
+   - It searches the MongoDB for relevant information
    - The retrieved context is provided to the LLM to generate a more informed response
 
 2. The knowledge base contains information relevant to spiritual and meditation topics:
