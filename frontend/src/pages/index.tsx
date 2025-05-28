@@ -5,7 +5,6 @@ import {
 } from "@livekit/components-react";
 import { AnimatePresence, motion } from "framer-motion";
 import Head from "next/head";
-import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import Assistant from "@/components/Assistant";
@@ -45,28 +44,20 @@ export function HomeInner() {
         <meta name="description" content={description} />
         <meta name="og:title" content={title} />
         <meta name="og:description" content={description} />
-
+        
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-
+        
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
+      
       <main
         className={`relative flex overflow-x-hidden flex-col justify-center items-center h-full w-full bg-background repeating-square-background`}
       >
-        <div className="absolute top-4 right-4 z-10">
-          <Link href="/llm-config">
-            <div className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-              Configure LLM
-            </div>
-          </Link>
-        </div>
-
         <AnimatePresence>
           {toastMessage && (
             <motion.div

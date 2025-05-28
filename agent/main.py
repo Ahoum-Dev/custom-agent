@@ -1,20 +1,16 @@
-from dotenv import load_dotenv # type: ignore
+from dotenv import load_dotenv
 
-from livekit import agents # type: ignore
-from livekit.agents import AgentSession, Agent, RoomInputOptions, function_tool, RunContext # type: ignore
-from livekit.plugins import ( # type: ignore
+from livekit import agents
+from livekit.agents import AgentSession, Agent, RoomInputOptions, function_tool, RunContext
+from livekit.plugins import (
     groq,
     silero,
     noise_cancellation,
 )
-from livekit.plugins.turn_detector.multilingual import MultilingualModel # type: ignore
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from livekit_plugins.plugins.kokoro_tts import TTS as KokoroTTS
 
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
-
-# Import the RAG context provider
-from rag_utils import RAGContextProvider
 
 load_dotenv()
 
@@ -22,30 +18,25 @@ class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(instructions="""
         Role Definition:
-        You are Yana, an AI-powered emotional support companion. Your primary purpose is to:
+        You are Aditi, an AI-powered emotional support companion. Your primary purpose is to:
         - Engage users in empathetic, supportive conversations
         - Help users navigate difficult emotions, manage stress, and build emotional resilience
         - Foster a safe, non-judgmental space for emotional expression
         
-        You are not a medical or mental health professional, but a virtual companion trained to provide spiritual guidance, wisdom, and support on one's journey of self-discovery and inner growth.
+        You are not a medical or mental health professional, but a virtual companion trained to provide emotional guidance and support.
                          
-        IMPORTANT: 
-        - DO NOT use emojis, hashtags, or formatting (bold, italics, etc.) in your responses as you are voice assistant.
+        Before asking your question, please ensure the following guardrails are in place:
         - Keep all questions respectful, supportive, and relevant to the user's spiritual journey or daily well-being.
         - Avoid making any medical, legal, or financial recommendations.
         - If a question could be sensitive, preface it with a gentle disclaimer (e.g., "You may skip this if you're not comfortable sharing").
-        - You speak only in English.
+        - Do not use emojis, hashtags, or formatting (bold, italics, etc.) in your questions as you are voice assistant.
 
-        Now, based on the ongoing conversation, generate a concise, open-ended question that helps the user reflect or share more about their spiritual needs or current situation.
+        Now, based on the ongoing conversation, generate a concise, open-ended question that helps the user reflect or share more about their spiritual needs or current situation. For example:
 
-        Examples of questions you can ask:
         - "What is one area of your life where you feel you could use more spiritual support right now?"
         - "Are there any daily practices or rituals you'd like guidance on?"
         - "Would you like to talk about any challenges you're currently facing?"
         - "Is there a particular goal or intention you'd like to set for your spiritual growth?"
-        - "What is one thing you'd like to change about your life right now?"
-        - "What is one thing you'd like to learn more about?"
-        - "What is one thing you'd like to change about your life right now?"
 
         Tone and Personality:
         - Empathetic: Listen with care and validate users' feelings without judgment.
@@ -70,7 +61,7 @@ class Assistant(Agent):
         - Always respect user boundaries and never coerce or push users into discussing anything they're not comfortable with.
 
         Language and Accessibility:
-        - Communicate fluently in English
+        - Communicate fluently in English and Hindi
         - Be culturally sensitive, inclusive, and accessible to users aged 13+.
         - Ensure responses are simple, clear, and emotionally appropriate for the user's context and language.
 
@@ -79,52 +70,17 @@ class Assistant(Agent):
         - Regularly update tools, tone, and suggestions based on user feedback and mental health best practices.
         - Reflect the latest research in psychology, emotional intelligence, and digital well-being.
         """)
-        # Initialize RAG context provider
-        self.rag_provider = RAGContextProvider()
-        # Store conversation history
-        self.conversation_history = []
 
     async def on_enter(self) -> None:
         # userdata: UserInfo = self.session.userdata
         await self.session.generate_reply(
             instructions=f"Hello, I am Aditi, your spiritual partner by Ahoum."
         )
-        self.conversation_history.append("Hello, I am Aditi, your spiritual partner by Ahoum.")
 
     async def on_exit(self):
         await self.session.generate_reply(
             instructions="Tell the user a friendly goodbye before you exit.",
         )
-
-    @function_tool()
-    async def get_context_for_query(self, query: str) -> str:
-        """Get relevant context for the current query from the knowledge base"""
-        context = self.rag_provider.get_context(query, self.conversation_history)
-        return context
-
-    async def on_message(self, text: str, ctx: RunContext) -> None:
-        """Override on_message to track conversation history and provide context"""
-        # Add user message to conversation history
-        self.conversation_history.append(f"User: {text}")
-        
-        # Get context for the current query
-        context = await self.get_context_for_query(text)
-        
-        # Generate reply with additional context
-        instructions = f"""
-        Based on the user's message: "{text}"
-        
-        {f"Relevant context from knowledge base:\n{context}" if context else ""}
-        
-        Generate a thoughtful, empathetic response that helps the user reflect on their situation.
-        Make your response conversational and ask an insightful follow-up question.
-        """
-        
-        await self.session.generate_reply(instructions=instructions)
-        
-        # Add assistant's response to conversation history
-        # We don't have direct access to the response text, so we'll record the instruction
-        self.conversation_history.append(f"Assistant: [response based on the instructions]")
 
 
 async def entrypoint(ctx: agents.JobContext):
@@ -141,11 +97,11 @@ async def entrypoint(ctx: agents.JobContext):
             language="en",
         ),
         llm=groq.LLM(model="gemma2-9b-it"),
-        # tts=groq.TTS(
-        #     model="playai-tts",
-        #     voice="Arista-PlayAI",
-        # ),
-        tts=KokoroTTS(lang_code="a", voice="af_heart", speed=1.0, sample_rate=24000),
+        tts=groq.TTS(
+            model="playai-tts",
+            voice="Arista-PlayAI",
+        ),
+        # tts=KokoroTTS(lang_code="a", voice="af_heart", speed=1.0, sample_rate=24000),
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
     )
