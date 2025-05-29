@@ -1,4 +1,3 @@
-# ─────────────────── agent/Dockerfile ───────────────────
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -6,15 +5,16 @@ ENV PYTHONUNBUFFERED=1 \
     PORT=8000
 
 WORKDIR /app
+
+# install deps (redis is now in requirements.txt)
 COPY agent/requirements.txt .
 RUN pip install -r requirements.txt
 
 # copy source
 COPY agent .
 
-# 🟢 pull the model weights once, at build‑time
-RUN python main.py download-files      \
-    && echo "Turn‑detector weights downloaded."
+# pull turn-detector weights
+RUN python main.py download-files && echo "Turn-detector weights downloaded."
 
 EXPOSE 8000
 CMD ["python", "main.py", "dev"]
