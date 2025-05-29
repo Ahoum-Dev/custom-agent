@@ -106,7 +106,7 @@ async def entrypoint(ctx: agents.JobContext):
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
     )
-    attach_logging(session, ctx.room.name)  # <— add this
+    attach_logging(session, ctx.room.name, ctx)
 
     await session.start(
         room=ctx.room,
