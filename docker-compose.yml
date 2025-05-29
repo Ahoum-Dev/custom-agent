@@ -27,7 +27,7 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - 'TRANSCRIPT_REDIS_URL=redis://default:Ahoum%40654321@82.29.162.1:5434/0'
+      - TRANSCRIPT_REDIS_URL=${TRANSCRIPT_REDIS_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
