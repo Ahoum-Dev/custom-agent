@@ -2,4 +2,5 @@ fastapi
 uvicorn[standard]
 transformers
 torch
-soundfile 
+soundfile
+chatterbox-tts 

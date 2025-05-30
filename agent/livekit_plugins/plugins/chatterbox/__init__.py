@@ -35,7 +35,12 @@ class TTS(BaseTTS):
                 url = f"{service_url}/synthesize"
                 payload = {"text": text, "voice_id": voice_id}
                 async with httpx.AsyncClient() as client:
-                    resp = await client.post(url, json=payload)
+                    try:
+                        resp = await client.post(url, json=payload)
+                    except httpx.ConnectError:
+                        # fallback to host.docker.internal if Docker DNS fails
+                        fallback_url = url.replace("chatterbox", "host.docker.internal")
+                        resp = await client.post(fallback_url, json=payload)
                     resp.raise_for_status()
                     data = resp.content
                 # Decode WAV bytes to PCM audio
