@@ -8,7 +8,6 @@ from livekit.plugins import (
     noise_cancellation,
 )
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from livekit_plugins.plugins.kokoro_tts import TTS as KokoroTTS
 
 from dataclasses import dataclass
 from redis_logger import attach_logging
@@ -102,7 +101,6 @@ async def entrypoint(ctx: agents.JobContext):
             model="playai-tts",
             voice="Arista-PlayAI",
         ),
-        # tts=KokoroTTS(lang_code="a", voice="af_heart", speed=1.0, sample_rate=24000),
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
     )
