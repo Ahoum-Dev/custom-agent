@@ -11,6 +11,8 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from dataclasses import dataclass
 from redis_logger import attach_logging
+import os
+from livekit_plugins.plugins.chatterbox import TTS as ChatterboxTTS
 
 load_dotenv()
 
@@ -97,9 +99,9 @@ async def entrypoint(ctx: agents.JobContext):
             language="en",
         ),
         llm=groq.LLM(model="gemma2-9b-it"),
-        tts=groq.TTS(
-            model="playai-tts",
-            voice="Arista-PlayAI",
+        tts=ChatterboxTTS(
+            service_url=os.getenv("CHATTERBOX_URL", "http://chatterbox:8001"),
+            voice_id=os.getenv("CHATTERBOX_VOICE_ID"),
         ),
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),

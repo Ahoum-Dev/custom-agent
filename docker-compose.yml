@@ -3,8 +3,8 @@ version: "3.9"
 services:
   agent:
     build:
-      context: .
-      dockerfile: agent/Dockerfile
+      context: ./agent
+      dockerfile: Dockerfile
     expose:
       - "8000"
     environment:
@@ -14,6 +14,21 @@ services:
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - TRANSCRIPT_REDIS_URL=${TRANSCRIPT_REDIS_URL}
+      - CHATTERBOX_URL=http://chatterbox:8001
+      - CHATTERBOX_VOICE_ID=${CHATTERBOX_VOICE_ID}
+
+  chatterbox:
+    build:
+      context: ./chatterbox
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./chatterbox/voices:/app/voices
+      - ./chatterbox/model_cache:/root/.cache/huggingface
+    environment:
+      - MODEL_CACHE_DIR=/root/.cache/huggingface
+      - HF_HOME=/root/.cache/huggingface
 
 networks:
   default:

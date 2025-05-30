@@ -7,11 +7,11 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # install deps (redis is now in requirements.txt)
-COPY agent/requirements.txt .
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # copy source
-COPY agent .
+COPY . .
 
 # pull turn-detector weights
 RUN python main.py download-files && echo "Turn-detector weights downloaded."
