@@ -3,6 +3,11 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Create and activate virtual environment
+RUN python3 -m venv env
+ENV VIRTUAL_ENV=/app/env
+ENV PATH="/app/env/bin:$PATH"
+
 # Install system dependencies for OpenMP and audio I/O
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \

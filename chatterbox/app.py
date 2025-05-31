@@ -8,26 +8,47 @@ import soundfile as sf
 import io
 import numpy as np
 import torch
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("chatterbox")
+
+# Default voice prompt path (if provided, this will be used for all syntheses)
+DEFAULT_VOICE_PROMPT = os.getenv("DEFAULT_VOICE_PROMPT_PATH")
 
 app = FastAPI()
 # Directory to store uploaded voice prompts
 os.makedirs("voices", exist_ok=True)
-# Determine device: allow override via DEVICE env var, else auto-select GPU if available
+# Determine device: allow override via DEVICE env var, else auto-select CUDA, MPS, or CPU
 device_env = os.getenv("DEVICE")
 if device_env:
     device = device_env
 else:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-# If loading on CPU, ensure checkpoints map to CPU
-if device == "cpu":
-    _orig_torch_load = torch.load
-    def _load_cpu(location, *args, **kwargs):
-        return _orig_torch_load(location, *args, map_location=torch.device('cpu'), **kwargs)
-    torch.load = _load_cpu
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+# Patch torch.load to map to the selected device
+map_location = torch.device(device)
+_orig_torch_load = torch.load
+def _patched_torch_load(*args, **kwargs):
+    if 'map_location' not in kwargs:
+        kwargs['map_location'] = map_location
+    return _orig_torch_load(*args, **kwargs)
+torch.load = _patched_torch_load
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Chatterbox TTS service starting up")
+    logger.info(f"Using device: {device}")
+    logger.info(f"Default voice prompt: {DEFAULT_VOICE_PROMPT}")
+
 # Initialize the Chatterbox TTS model on the selected device
 tts_model = ChatterboxTTS.from_pretrained(device=device)
-# Default voice prompt path (if provided, this will be used for all syntheses)
-DEFAULT_VOICE_PROMPT = os.getenv("DEFAULT_VOICE_PROMPT_PATH")
+logger.info(f"Loaded ChatterboxTTS model on device: {device}")
 
 class UploadResponse(BaseModel):
     voice_id: str
@@ -35,6 +56,12 @@ class UploadResponse(BaseModel):
 class SynthesizeRequest(BaseModel):
     text: str
     voice_id: Optional[str] = None
+    # Optional path to a specific audio prompt file
+    audio_prompt_path: Optional[str] = None
+    # Speech exaggeration factor
+    exaggeration: Optional[float] = 1.0
+    # CFG scaling weight
+    cfg_weight: Optional[float] = 1.0
 
 @app.post("/upload", response_model=UploadResponse)
 async def upload_voice(file: UploadFile = File(...)):
@@ -45,12 +72,15 @@ async def upload_voice(file: UploadFile = File(...)):
     content = await file.read()
     with open(path, "wb") as f:
         f.write(content)
+    logger.info(f"Uploaded voice prompt with ID {voice_id}, saved to {path}")
     return {"voice_id": voice_id}
 
 @app.post("/synthesize")
 async def synthesize(req: SynthesizeRequest):
     # Determine which voice prompt to use
-    if DEFAULT_VOICE_PROMPT:
+    if req.audio_prompt_path:
+        voice_file = req.audio_prompt_path
+    elif DEFAULT_VOICE_PROMPT:
         voice_file = DEFAULT_VOICE_PROMPT
     else:
         if not req.voice_id:
@@ -60,8 +90,17 @@ async def synthesize(req: SynthesizeRequest):
         if not matched:
             return {"error": "voice not found"}
         voice_file = f"voices/{matched[0]}"
-    # Generate speech using ChatterboxTTS
-    wav = tts_model.generate(req.text, audio_prompt_path=voice_file)
+    logger.info(
+        f"Received synthesize request: text='{req.text[:30]}...', "
+        f"voice_file='{voice_file}', exaggeration={req.exaggeration}, cfg_weight={req.cfg_weight}"
+    )
+    # Generate speech using ChatterboxTTS with provided parameters
+    wav = tts_model.generate(
+        req.text,
+        audio_prompt_path=voice_file,
+        exaggeration=req.exaggeration,
+        cfg_weight=req.cfg_weight,
+    )
     audio_np = wav.cpu().numpy()
     # Ensure shape is (frames, channels)
     if audio_np.ndim > 1:
