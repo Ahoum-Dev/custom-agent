@@ -16,6 +16,7 @@ logger = logging.getLogger("chatterbox")
 
 # Default voice prompt path (if provided, this will be used for all syntheses)
 DEFAULT_VOICE_PROMPT = os.getenv("DEFAULT_VOICE_PROMPT_PATH")
+USE_CUSTOM_VOICE_PROMPT = os.getenv("USE_CUSTOM_VOICE_PROMPT", "true").lower() in ("1", "true", "yes")
 
 app = FastAPI()
 # Directory to store uploaded voice prompts
@@ -45,6 +46,7 @@ async def startup_event():
     logger.info("Chatterbox TTS service starting up")
     logger.info(f"Using device: {device}")
     logger.info(f"Default voice prompt: {DEFAULT_VOICE_PROMPT}")
+    logger.info(f"Use custom voice prompt: {USE_CUSTOM_VOICE_PROMPT}")
 
 # Initialize the Chatterbox TTS model on the selected device
 tts_model = ChatterboxTTS.from_pretrained(device=device)
@@ -78,18 +80,25 @@ async def upload_voice(file: UploadFile = File(...)):
 @app.post("/synthesize")
 async def synthesize(req: SynthesizeRequest):
     # Determine which voice prompt to use
-    if req.audio_prompt_path:
-        voice_file = req.audio_prompt_path
-    elif DEFAULT_VOICE_PROMPT:
+    if not USE_CUSTOM_VOICE_PROMPT:
+        # Use default voice prompt only
+        if not DEFAULT_VOICE_PROMPT:
+            return {"error": "Default voice prompt not configured"}
         voice_file = DEFAULT_VOICE_PROMPT
     else:
-        if not req.voice_id:
-            return {"error": "voice_id required"}
-        files = os.listdir("voices")
-        matched = [f for f in files if f.startswith(req.voice_id)]
-        if not matched:
-            return {"error": "voice not found"}
-        voice_file = f"voices/{matched[0]}"
+        # Use custom voice prompt if provided, else fallback to default
+        if req.audio_prompt_path:
+            voice_file = req.audio_prompt_path
+        elif DEFAULT_VOICE_PROMPT:
+            voice_file = DEFAULT_VOICE_PROMPT
+        else:
+            if not req.voice_id:
+                return {"error": "voice_id required"}
+            files = os.listdir("voices")
+            matched = [f for f in files if f.startswith(req.voice_id)]
+            if not matched:
+                return {"error": "voice not found"}
+            voice_file = f"voices/{matched[0]}"
     logger.info(
         f"Received synthesize request: text='{req.text[:30]}...', "
         f"voice_file='{voice_file}', exaggeration={req.exaggeration}, cfg_weight={req.cfg_weight}"
