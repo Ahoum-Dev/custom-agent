@@ -79,34 +79,33 @@ async def upload_voice(file: UploadFile = File(...)):
 
 @app.post("/synthesize")
 async def synthesize(req: SynthesizeRequest):
-    # Determine which voice prompt to use
-    if not USE_CUSTOM_VOICE_PROMPT:
-        # Use default voice prompt only
-        if not DEFAULT_VOICE_PROMPT:
-            return {"error": "Default voice prompt not configured"}
-        voice_file = DEFAULT_VOICE_PROMPT
-    else:
-        # Use custom voice prompt if provided, else fallback to default
-        if req.audio_prompt_path:
-            voice_file = req.audio_prompt_path
-        elif DEFAULT_VOICE_PROMPT:
-            voice_file = DEFAULT_VOICE_PROMPT
-        else:
-            if not req.voice_id:
-                return {"error": "voice_id required"}
-            files = os.listdir("voices")
-            matched = [f for f in files if f.startswith(req.voice_id)]
-            if not matched:
-                return {"error": "voice not found"}
-            voice_file = f"voices/{matched[0]}"
+    # Comment out file input logic - use no voice prompt for now
+    # if not USE_CUSTOM_VOICE_PROMPT:
+    #     # Use default voice prompt only
+    #     if not DEFAULT_VOICE_PROMPT:
+    #         return {"error": "Default voice prompt not configured"}
+    #     voice_file = DEFAULT_VOICE_PROMPT
+    # else:
+    #     # Use custom voice prompt if provided, else fallback to default
+    #     if req.audio_prompt_path:
+    #         voice_file = req.audio_prompt_path
+    #     elif DEFAULT_VOICE_PROMPT:
+    #         voice_file = DEFAULT_VOICE_PROMPT
+    #     else:
+    #         if not req.voice_id:
+    #             return {"error": "voice_id required"}
+    #         files = os.listdir("voices")
+    #         matched = [f for f in files if f.startswith(req.voice_id)]
+    #         if not matched:
+    #             return {"error": "voice not found"}
+    #         voice_file = f"voices/{matched[0]}"
     logger.info(
         f"Received synthesize request: text='{req.text[:30]}...', "
-        f"voice_file='{voice_file}', exaggeration={req.exaggeration}, cfg_weight={req.cfg_weight}"
+        f"exaggeration={req.exaggeration}, cfg_weight={req.cfg_weight}"
     )
-    # Generate speech using ChatterboxTTS with provided parameters
+    # Generate speech using ChatterboxTTS without voice prompt
     wav = tts_model.generate(
         req.text,
-        audio_prompt_path=voice_file,
         exaggeration=req.exaggeration,
         cfg_weight=req.cfg_weight,
     )

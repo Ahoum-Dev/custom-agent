@@ -49,7 +49,8 @@ services:
     environment:
       - MODEL_CACHE_DIR=/root/.cache/huggingface
       - HF_HOME=/root/.cache/huggingface
-      - DEFAULT_VOICE_PROMPT_PATH=/app/voices/KrishnaDas.wav
+      # - DEFAULT_VOICE_PROMPT_PATH=/app/voices/KrishnaDas.wav
+      - USE_CUSTOM_VOICE_PROMPT=false
 
 networks:
   default:
