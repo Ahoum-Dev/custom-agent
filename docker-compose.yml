@@ -34,6 +34,8 @@ services:
       - TRANSCRIPT_REDIS_URL=${TRANSCRIPT_REDIS_URL}
       - CHATTERBOX_URL=http://chatterbox:8001
       - CHATTERBOX_VOICE_ID=${CHATTERBOX_VOICE_ID}
+    volumes:
+      - ./chatterbox/voices:/app/voices
 
   chatterbox:
     build:
