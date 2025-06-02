@@ -1,0 +1,6 @@
+name,phone_number,status,last_called,call_attempts,notes,onboarding_completed
+John Smith,+1234567890,pending,,,0,,FALSE
+Jane Doe,+1987654321,pending,,,0,,FALSE
+Mike Johnson,+1555123456,pending,,,0,,FALSE
+Sarah Wilson,+1444987654,pending,,,0,,FALSE
+David Brown,+1333456789,pending,,,0,,FALSE
