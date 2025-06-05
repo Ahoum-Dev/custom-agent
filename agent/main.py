@@ -8,11 +8,42 @@ from livekit.plugins import (
     noise_cancellation,
 )
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from livekit.plugins.speechify import TTS as SpeechifyTTS
 
 from dataclasses import dataclass
-from redis_logger import attach_logging
+from postgres_logger import attach_logging
+
+import livekit.agents.ipc.inference_proc_executor as _ipc_inf
+import logging
 
 load_dotenv()
+
+_orig_inf_init = _ipc_inf.InferenceProcExecutor.__init__
+def _patched_inf_init(self, *args, **kwargs):
+    # Increase inference executor initialization timeout to 120 seconds
+    kwargs['initialize_timeout'] = 120.0
+    return _orig_inf_init(self, *args, **kwargs)
+_ipc_inf.InferenceProcExecutor.__init__ = _patched_inf_init
+
+class SafeSTT:
+    def __init__(self, plugin):
+        self._plugin = plugin
+
+    async def recognize(self, *args, **kwargs):
+        """
+        Wrap the underlying STT recognize call, catching any errors.
+        """
+        try:
+            # Call the underlying plugin and return its result.
+            return await self._plugin.recognize(*args, **kwargs)
+        except Exception as ex:
+            logging.error("STT recognize error caught, skipping recognition: %s", ex)
+            # Return None or a safe default to continue without crashing
+            return None
+
+    def __getattr__(self, name):
+        # Delegate all other attributes to the underlying plugin
+        return getattr(self._plugin, name)
 
 class Assistant(Agent):
     def __init__(self) -> None:
@@ -90,13 +121,14 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Initialize plugins with debug logs
     print("[custom-agent] loading STT plugin...", flush=True)
-    stt_plugin = groq.STT(model="whisper-large-v3-turbo", language="en")
+    raw_stt = groq.STT(model="whisper-large-v3-turbo", language="en")
+    stt_plugin = SafeSTT(raw_stt)
     print("[custom-agent] STT plugin loaded", flush=True)
     print("[custom-agent] loading LLM plugin...", flush=True)
     llm_plugin = groq.LLM(model="gemma2-9b-it")
     print("[custom-agent] LLM plugin loaded", flush=True)
     print("[custom-agent] loading TTS plugin...", flush=True)
-    tts_plugin = groq.TTS(model="playai-tts", voice="Arista-PlayAI")
+    tts_plugin = SpeechifyTTS(model="simba-english", voice_id="jack")
     print("[custom-agent] TTS plugin loaded", flush=True)
     print("[custom-agent] loading VAD plugin...", flush=True)
     vad_plugin = silero.VAD.load()
@@ -130,6 +162,6 @@ async def entrypoint(ctx: agents.JobContext):
 
 
 if __name__ == "__main__":
-    # Increase initialization timeout to 60 seconds
-    options = agents.WorkerOptions(entrypoint_fnc=entrypoint, initialization_timeout_ms=60000)
+    # Increase initialization timeout to 120 seconds
+    options = agents.WorkerOptions(entrypoint_fnc=entrypoint, initialize_process_timeout=120.0)
     agents.cli.run_app(options)
