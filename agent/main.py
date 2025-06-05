@@ -8,7 +8,6 @@ from livekit.plugins import (
     noise_cancellation,
 )
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from livekit_plugins.plugins.kokoro_tts import TTS as KokoroTTS
 
 from dataclasses import dataclass
 from redis_logger import attach_logging
