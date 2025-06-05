@@ -84,35 +84,45 @@ class Assistant(Agent):
 
 
 async def entrypoint(ctx: agents.JobContext):
+    print("[custom-agent] entrypoint: start", flush=True)
     await ctx.connect()
+    print("[custom-agent] entrypoint: after ctx.connect", flush=True)
 
+    # Initialize plugins with debug logs
+    print("[custom-agent] loading STT plugin...", flush=True)
+    stt_plugin = groq.STT(model="whisper-large-v3-turbo", language="en")
+    print("[custom-agent] STT plugin loaded", flush=True)
+    print("[custom-agent] loading LLM plugin...", flush=True)
+    llm_plugin = groq.LLM(model="gemma2-9b-it")
+    print("[custom-agent] LLM plugin loaded", flush=True)
+    print("[custom-agent] loading TTS plugin...", flush=True)
+    tts_plugin = groq.TTS(model="playai-tts", voice="Arista-PlayAI")
+    print("[custom-agent] TTS plugin loaded", flush=True)
+    print("[custom-agent] loading VAD plugin...", flush=True)
+    vad_plugin = silero.VAD.load()
+    print("[custom-agent] VAD plugin loaded", flush=True)
+    print("[custom-agent] loading turn detector...", flush=True)
+    turn_detector = MultilingualModel()
+    print("[custom-agent] turn detector loaded", flush=True)
+    print("[custom-agent] creating AgentSession...", flush=True)
     session = AgentSession(
-        # To use local Whisper STT, uncomment the following and comment out groq.STT:
-        # stt=whisper.STT(
-        #     model="base",  # or "small", "medium", "large", etc.
-        #     language="en",
-        # ),
-        stt=groq.STT(
-            model="whisper-large-v3-turbo",
-            language="en",
-        ),
-        llm=groq.LLM(model="gemma2-9b-it"),
-        tts=groq.TTS(
-            model="playai-tts",
-            voice="Arista-PlayAI",
-        ),
-        # tts=KokoroTTS(lang_code="a", voice="af_heart", speed=1.0, sample_rate=24000),
-        vad=silero.VAD.load(),
-        turn_detection=MultilingualModel(),
+        stt=stt_plugin,
+        llm=llm_plugin,
+        tts=tts_plugin,
+        vad=vad_plugin,
+        turn_detection=turn_detector,
     )
+    print("[custom-agent] AgentSession created", flush=True)
+
+    print("[custom-agent] before session.start", flush=True)
     attach_logging(session, ctx.room.name, ctx)
 
     await session.start(
         room=ctx.room,
         agent=Assistant(),
-        room_input_options=RoomInputOptions(
-        ),
+        room_input_options=RoomInputOptions(),
     )
+    print("[custom-agent] after session.start", flush=True)
 
     await session.generate_reply(
         instructions="Greet the user and offer your assistance."
@@ -120,4 +130,6 @@ async def entrypoint(ctx: agents.JobContext):
 
 
 if __name__ == "__main__":
-    agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint))
+    # Increase initialization timeout to 60 seconds
+    options = agents.WorkerOptions(entrypoint_fnc=entrypoint, initialization_timeout_ms=60000)
+    agents.cli.run_app(options)
