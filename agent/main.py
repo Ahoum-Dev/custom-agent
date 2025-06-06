@@ -118,6 +118,7 @@ async def entrypoint(ctx: agents.JobContext):
     print("[custom-agent] entrypoint: start", flush=True)
     await ctx.connect()
     print("[custom-agent] entrypoint: after ctx.connect", flush=True)
+    
 
     # Initialize plugins with debug logs
     print("[custom-agent] loading STT plugin...", flush=True)
