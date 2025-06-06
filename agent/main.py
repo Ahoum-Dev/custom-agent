@@ -8,7 +8,7 @@ from livekit.plugins import (
     noise_cancellation,
 )
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from livekit.plugins.speechify import TTS as SpeechifyTTS
+from livekit.plugins.speechify import TTS as SpeechifyTTS # type: ignore
 
 from dataclasses import dataclass
 from postgres_logger import attach_logging
@@ -138,6 +138,10 @@ async def entrypoint(ctx: agents.JobContext):
     turn_detector = MultilingualModel()
     print("[custom-agent] turn detector loaded", flush=True)
     print("[custom-agent] creating AgentSession...", flush=True)
+
+
+
+    
     session = AgentSession(
         stt=stt_plugin,
         llm=llm_plugin,

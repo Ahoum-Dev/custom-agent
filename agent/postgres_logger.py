@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import asyncpg
 import httpx
+import json
 
 from livekit.agents import AgentSession
 
@@ -98,6 +99,24 @@ CREATE TABLE IF NOT EXISTS messages (
         finally:
             await conn.close()
 
+        # Persist conversation as JSON file
+        try:
+            os.makedirs("conversation_logs", exist_ok=True)
+            convo_log = {
+                "uid": user_id,
+                "conversation_id": str(conv_id),
+                "created_at": started_at.isoformat() + "Z",
+                "updated_at": ended_at.isoformat() + "Z",
+                "conversation": [
+                    {"speaker": msg["role"], "text": msg["content"]}
+                    for msg in message_buffer
+                ],
+            }
+            with open(os.path.join("conversation_logs", f"{conv_id}.json"), "w") as f:
+                json.dump(convo_log, f, indent=2)
+        except Exception as e:
+            print(f"Error writing conversation JSON: {e}", flush=True)
+
         # Optionally notify another endpoint with session and user IDs
         notify_url = os.getenv("NOTIFY_URL")
         if notify_url:
@@ -111,4 +130,9 @@ CREATE TABLE IF NOT EXISTS messages (
                 pass
 
     # Register shutdown callback
-    ctx.add_shutdown_callback(_flush_history) 
+    ctx.add_shutdown_callback(_flush_history)
+
+    # Also flush when the audio stream closes
+    @session.on("stream_closed")
+    async def _on_stream_closed(ev):
+        await _flush_history() 
