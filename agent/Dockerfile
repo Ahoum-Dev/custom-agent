@@ -8,6 +8,7 @@ WORKDIR /app
 
 # install deps (redis is now in requirements.txt)
 COPY agent/requirements.txt .
+RUN pip install asyncpg
 RUN pip install -r requirements.txt
 
 # copy source
