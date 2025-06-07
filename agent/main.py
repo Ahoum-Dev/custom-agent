@@ -100,6 +100,8 @@ class Assistant(Agent):
         - Learn from user interactions to personalize conversations over time.
         - Regularly update tools, tone, and suggestions based on user feedback and mental health best practices.
         - Reflect the latest research in psychology, emotional intelligence, and digital well-being.
+
+        IMPORTANT: LIMIT your responses to 2-3 sentences maximum.
         """)
 
     async def on_enter(self) -> None:
@@ -126,7 +128,7 @@ async def entrypoint(ctx: agents.JobContext):
     stt_plugin = SafeSTT(raw_stt)
     print("[custom-agent] STT plugin loaded", flush=True)
     print("[custom-agent] loading LLM plugin...", flush=True)
-    llm_plugin = groq.LLM(model="gemma2-9b-it")
+    llm_plugin = groq.LLM(model="llama-3.3-70b-versatile")
     print("[custom-agent] LLM plugin loaded", flush=True)
     print("[custom-agent] loading TTS plugin...", flush=True)
     tts_plugin = SpeechifyTTS(model="simba-english", voice_id="jack")
