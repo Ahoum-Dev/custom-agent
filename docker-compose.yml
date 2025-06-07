@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: agent/Dockerfile
     ports:
-      - "8000:8000"
+      - "8012:8000"
     environment:
       - PORT=8000
       - LIVEKIT_URL=${LIVEKIT_URL}
