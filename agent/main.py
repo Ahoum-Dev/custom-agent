@@ -12,7 +12,7 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from dataclasses import dataclass
 from redis_logger import attach_logging
 import os
-from livekit_plugins.plugins.chatterbox import TTS as ChatterboxTTS
+from livekit.plugins import speechify
 
 load_dotenv()
 
@@ -89,20 +89,15 @@ async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
 
     session = AgentSession(
-        # To use local Whisper STT, uncomment the following and comment out groq.STT:
-        # stt=whisper.STT(
-        #     model="base",  # or "small", "medium", "large", etc.
-        #     language="en",
-        # ),
         stt=groq.STT(
             model="whisper-large-v3-turbo",
             language="en",
         ),
         llm=groq.LLM(model="gemma2-9b-it"),
-        tts=ChatterboxTTS(
-            service_url=os.getenv("CHATTERBOX_URL", "http://chatterbox:8001"),
-            voice_id=os.getenv("CHATTERBOX_VOICE_ID"),
-        ),
+        tts=speechify.TTS(
+                model="simba-english",
+                voice_id="jack",
+            ),
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
     )
@@ -118,7 +113,6 @@ async def entrypoint(ctx: agents.JobContext):
     await session.generate_reply(
         instructions="Greet the user and offer your assistance."
     )
-
 
 if __name__ == "__main__":
     agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint))

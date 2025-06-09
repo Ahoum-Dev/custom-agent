@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-transformers
-torch
-soundfile
-chatterbox-tts
-python-multipart
