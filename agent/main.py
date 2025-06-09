@@ -9,6 +9,8 @@ from livekit.plugins import (
 )
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from livekit.plugins import speechify
+
 from dataclasses import dataclass
 from redis_logger import attach_logging
 
@@ -18,11 +20,13 @@ class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(instructions="""
         Role Definition:
-        You are Aditi, an AI-powered emotional support companion. Your primary purpose is to:
+        You are Ohmi, an AI-powered emotional support companion. Your primary purpose is to:
         - Engage users in empathetic, supportive conversations
         - Help users navigate difficult emotions, manage stress, and build emotional resilience
         - Foster a safe, non-judgmental space for emotional expression
         
+        IMPORTANT: LIMIT your responses to 2-3 sentences maximum.
+
         You are not a medical or mental health professional, but a virtual companion trained to provide emotional guidance and support.
                          
         Before asking your question, please ensure the following guardrails are in place:
@@ -74,7 +78,7 @@ class Assistant(Agent):
     async def on_enter(self) -> None:
         # userdata: UserInfo = self.session.userdata
         await self.session.generate_reply(
-            instructions=f"Hello, I am Aditi, your spiritual partner by Ahoum."
+            instructions=f"Hello, I am Ohmi, your spiritual partner by Ahoum."
         )
 
     async def on_exit(self):
@@ -87,24 +91,19 @@ async def entrypoint(ctx: agents.JobContext):
     await ctx.connect()
 
     session = AgentSession(
-        # To use local Whisper STT, uncomment the following and comment out groq.STT:
-        # stt=whisper.STT(
-        #     model="base",  # or "small", "medium", "large", etc.
-        #     language="en",
-        # ),
         stt=groq.STT(
             model="whisper-large-v3-turbo",
             language="en",
         ),
-        llm=groq.LLM(model="gemma2-9b-it"),
-        tts=groq.TTS(
-            model="playai-tts",
-            voice="Arista-PlayAI",
+        llm=groq.LLM(model="llama-3.3-70b-versatile"),
+        tts=speechify.TTS(
+            model="simba-english",
+            voice_id="fb3f06b8-52d3-4967-b427-cba175907221",
         ),
-        # tts=KokoroTTS(lang_code="a", voice="af_heart", speed=1.0, sample_rate=24000),
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),
     )
+
     attach_logging(session, ctx.room.name, ctx)
 
     await session.start(
